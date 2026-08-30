@@ -1,13 +1,14 @@
-# Echomind_MeiTuan 外卖客服系统
+# Echomind_MeiTuan 后端
 
-Echomind_MeiTuan 是基于 EchoMind 框架轻量重构的美团外卖客服场景项目。当前版本只保留 Python 后端，使用 FastAPI 对外提供接口，模型侧统一通过 DeepSeek OpenAI 兼容接口接入。
+Echomind_MeiTuan 是基于 EchoMind 框架轻量重构的美团外卖客服后端。
+项目使用 FastAPI 对外提供接口，模型侧统一通过 DeepSeek OpenAI 兼容接口接入。
 
 核心链路：
 
 ```text
 用户请求
   -> FastAPI /chat
-  -> MemoryManager 读取工作记忆、情景记忆、用户画像
+  -> MemoryManager 读取会话记忆与用户画像
   -> IntentRecognizer 识别外卖客服意图
   -> MCPToolManager 调用知识库或订单查询工具
   -> AgentOrchestrator 路由到配送、退款、平台或升级 Agent
@@ -75,7 +76,7 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 ```
 
-Redis 和 ChromaDB 都是可选增强项。本地没有服务时，项目会自动使用内存兜底，便于先跑通演示。
+Redis 和 ChromaDB 都是可选增强项。未配置时，项目会自动使用内存兜底，便于先跑通演示。
 
 ## 本地启动
 
@@ -107,9 +108,8 @@ docker compose up -d --build
 
 默认端口：
 
-- API：`http://localhost:8000`
-- Swagger：`http://localhost:8000/docs`
-- Nginx：`http://localhost`
+- API：`http://localhost:8011`
+- Swagger：`http://localhost:8011/docs`
 - ChromaDB：`http://localhost:8001`
 - Prometheus：`http://localhost:9090`
 
@@ -117,18 +117,18 @@ docker compose up -d --build
 
 核心接口：
 
-- `GET /`：项目入口信息。
-- `GET /health`：服务和 Agent 状态。
-- `POST /chat`：主客服对话接口。
-- `GET /skills`：查看已加载 Skills。
-- `POST /skills/reload`：热加载 Skills。
-- `POST /search`：搜索外卖客服知识库。
-- `POST /knowledge/add`：批量增加知识库文档。
-- `POST /knowledge/upload`：上传知识库文件。
-- `GET /knowledge/stats`：知识库片段数量。
-- `GET /monitor`：监控摘要。
-- `GET /metrics`：Prometheus 指标。
-- `POST /eval/run`：运行默认评测集。
+- `GET /`：项目入口信息
+- `GET /health`：服务和 Agent 状态
+- `POST /chat`：主客服对话接口
+- `GET /skills`：查看已加载 Skills
+- `POST /skills/reload`：热加载 Skills
+- `POST /search`：搜索外卖客服知识库
+- `POST /knowledge/add`：批量增加知识库文档
+- `POST /knowledge/upload`：上传知识库文件
+- `GET /knowledge/stats`：知识库片段数量
+- `GET /monitor`：监控摘要
+- `GET /metrics`：Prometheus 指标
+- `POST /eval/run`：运行默认评测集
 
 `POST /chat` 示例：
 
@@ -179,7 +179,9 @@ docker compose up -d --build
 - `skills/refund_support/SKILL.md`
 - `skills/platform_support/SKILL.md`
 
-每个 Skill 都包含角色定位、核验信息、标准流程、回复风格和禁止事项。修改后可以调用：
+每个 Skill 都包含角色定位、核验要求、回复风格、处理流程和禁止事项。
+
+修改后可以调用：
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8011/skills/reload"
@@ -219,3 +221,4 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8011/eval/run" -ContentTyp
 - 没有单独前端，Swagger 和 HTTP API 用于验证。
 
 后续如果要扩展真实业务，只需要把 `mcp/order_store.py` 的 mock 查询替换为真实订单服务适配器，并继续复用现有意图、Agent、Skills、记忆、监控和评测链路。
+
