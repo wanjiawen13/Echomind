@@ -58,6 +58,7 @@ class AnomalyDetector:
         self._history: Dict[str, Deque[float]] = defaultdict(lambda: deque(maxlen=window))
 
     def record(self, metric: str, value: float) -> Optional[Dict[str, Any]]:
+        # 采用滑动窗口做轻量异常检测，偏离均值太多时就标记出来。
         buf = self._history[metric]
         buf.append(value)
         if len(buf) < self._window // 2:
@@ -108,6 +109,7 @@ class PerformanceMonitor:
             self._setup_prometheus(prometheus_port)
 
     def _setup_prometheus(self, port: int) -> None:
+        # 如果 Prometheus 可用，就把核心指标直接暴露出去。
         if Counter is None or Gauge is None or Histogram is None:
             return
         self._prom = {
@@ -142,6 +144,7 @@ class PerformanceMonitor:
             await asyncio.sleep(self._interval)
 
     async def _collect(self) -> None:
+        # 每轮先收集 Agent 和工具统计，再据此生成告警和路由建议。
         agent_stats = self._orchestrator.get_stats()
         tool_stats = self._tool_manager.get_stats()
         routing_penalties: Dict[str, float] = {}
@@ -185,6 +188,7 @@ class PerformanceMonitor:
 
     @staticmethod
     def _routing_penalty(success_rate: float, avg_ms: float) -> float:
+        # 成功率低或延迟高的 Agent，会被路由器打上更高惩罚。
         penalty = 0.0
         if success_rate < 0.90:
             penalty += min(0.5, (0.90 - success_rate) * 2)
@@ -193,6 +197,7 @@ class PerformanceMonitor:
         return min(penalty, 0.9)
 
     def _check_threshold(self, metric: str, value: float, label: str) -> None:
+        # 达到阈值就生成告警，必要时异步推送 webhook。
         if metric not in self.THRESHOLDS:
             return
         threshold, severity, operator = self.THRESHOLDS[metric]
@@ -210,6 +215,7 @@ class PerformanceMonitor:
                 create_task(self._send_webhook(alert))
 
     def _generate_routing_suggestions(self, agent_stats: Dict[str, Any]) -> None:
+        # 这里给的是可读性建议，方便排查，而不是机器决策本身。
         for agent_key, stats in agent_stats.items():
             if stats["success_rate"] < 0.85 and stats["total"] > 10:
                 self._add_suggestion(

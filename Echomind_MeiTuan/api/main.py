@@ -54,6 +54,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ── 全局运行时组件 ────────────────────────────────────────────────────────────
+# 这些对象在启动阶段统一创建，后面的路由只负责读取和编排。
 _orchestrator = None
 _memory = None
 _tool_manager = None
@@ -65,6 +67,7 @@ _order_store = None
 
 
 def _llm_cfg() -> Dict[str, Any]:
+    # 当前项目统一适配 DeepSeek，这里只保留 DeepSeek 相关配置入口。
     api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("未设置 DEEPSEEK_API_KEY")
@@ -84,19 +87,24 @@ async def _startup():
     cfg = _llm_cfg()
     logger.info("模型: %s base_url: %s", cfg["model"], cfg.get("base_url", "(local)"))
 
+    # 意图识别器独立初始化，既给主流程用，也给评测器复用。
     recognizer = IntentRecognizer(api_key=cfg["api_key"], base_url=cfg.get("base_url"), model=cfg["model"])
 
+    # Skills 采用目录热加载，方便直接改业务规则而不重启服务。
     skills_dir = os.getenv("MEITUAN_SKILLS_DIR", str(pathlib.Path(_ROOT) / "skills"))
     _skill_manager = SkillManager(root_dir=skills_dir, max_prompt_chars=int(os.getenv("MEITUAN_SKILLS_MAX_PROMPT_CHARS", "5000")))
     _skill_manager.load()
 
+    # 知识库先加载本地示例文档，保证项目开箱即用。
     _knowledge_base = KnowledgeBase(data_dir=str(pathlib.Path(_ROOT) / "data" / "demo_docs"))
     if _knowledge_base.doc_count() == 0:
         _knowledge_base.seed_default_docs()
     logger.info("知识库已加载: %s 个片段", _knowledge_base.doc_count())
 
+    # 订单仓库是当前 MVP 的查询数据源，后续可以直接替换成真实接口适配器。
     _order_store = MockOrderStore(source_path=str(pathlib.Path(_ROOT) / "data" / "mock_orders.json"))
 
+    # MCP 工具管理器统一承接知识库检索、订单查询等能力。
     _tool_manager = MCPToolManager(api_key=cfg["api_key"], base_url=cfg.get("base_url"), model=cfg["model"])
 
     def knowledge_fallback(params: Dict[str, Any], context: Optional[Dict[str, Any]], error: str):
@@ -146,6 +154,7 @@ async def _startup():
         )
     )
 
+    # 记忆层同时管理工作记忆、会话摘要和用户画像。
     _memory = MemoryManager(
         redis_url=os.getenv("REDIS_URL", ""),
         chroma_host=os.getenv("CHROMA_HOST", ""),
@@ -156,6 +165,7 @@ async def _startup():
         model=cfg["model"],
     )
 
+    # 编排器负责意图识别、路由、订单查询前置和 Agent 回复生成。
     _orchestrator = AgentOrchestrator(
         api_key=cfg["api_key"],
         base_url=cfg.get("base_url"),
@@ -165,6 +175,7 @@ async def _startup():
         recognizer=recognizer,
     )
 
+    # 监控模块持续采集 Agent/工具指标，并把异常写入告警和 Prometheus。
     prom_port = int(os.getenv("PROMETHEUS_PORT", "0")) or None
     _monitor = PerformanceMonitor(
         orchestrator=_orchestrator,
@@ -175,6 +186,7 @@ async def _startup():
     )
     await _monitor.start()
 
+    # 评测器用于跑意图识别和端到端对话样例。
     _evaluator = EndToEndEvaluator(
         orchestrator=_orchestrator,
         recognizer=recognizer,
@@ -255,6 +267,7 @@ class ChatResponse(BaseModel):
     tracking_info: Dict[str, Any] = Field(default_factory=dict)
 
 
+# ── 基础健康检查 ──────────────────────────────────────────────────────────────
 @app.get("/health")
 async def health():
     if _orchestrator is None:
@@ -262,6 +275,7 @@ async def health():
     return {"status": "ok", "agents": _orchestrator.get_stats()}
 
 
+# ── Skills 管理 ───────────────────────────────────────────────────────────────
 @app.get("/skills", tags=["Skills"])
 async def skills_summary():
     if _skill_manager is None:
@@ -279,6 +293,7 @@ async def reload_skills():
     return _skill_manager.summary()
 
 
+# ── 知识库检索判定 ───────────────────────────────────────────────────────────
 def _should_use_knowledge(message: str, intent=None) -> bool:
     msg = (message or "").strip().lower()
     if not msg:
@@ -322,12 +337,14 @@ async def _build_knowledge_context(message: str, intent=None, top_k: int = 3) ->
         return "", False
 
 
+# ── 对话主链路 ───────────────────────────────────────────────────────────────
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     if _orchestrator is None or _memory is None:
         raise HTTPException(503, "服务未就绪")
 
     conv_id = req.conv_id or str(uuid.uuid4())
+    # 先从记忆层取最近上下文，再交给意图识别和路由器决定是否需要查单。
     mem_ctx = await _memory.get_context(req.user_id, conv_id, query=req.message)
     history = [
         {"role": msg.role.value, "content": msg.content}
@@ -383,6 +400,7 @@ async def chat(req: ChatRequest):
     )
 
 
+# ── 运行态观测 ───────────────────────────────────────────────────────────────
 @app.get("/monitor")
 async def monitor_summary():
     if _monitor is None:
@@ -395,6 +413,7 @@ async def prometheus_metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+# ── 知识库维护 ───────────────────────────────────────────────────────────────
 @app.post("/search")
 async def search(query: str, top_k: int = 5):
     if _tool_manager is None:
@@ -417,6 +436,7 @@ class EvalRunInput(BaseModel):
     dialog_cases: Optional[List[Dict[str, Any]]] = None
 
 
+# ── 知识导入接口 ─────────────────────────────────────────────────────────────
 @app.post("/knowledge/add", tags=["Knowledge"])
 async def add_knowledge(body: BatchDocInput):
     if _knowledge_base is None:
@@ -449,6 +469,7 @@ async def upload_knowledge(file: UploadFile = File(...)):
     return {"message": f"文件 {filename} 导入成功", "added_chunks": count, "total_chunks": _knowledge_base.doc_count()}
 
 
+# ── 评测接口 ─────────────────────────────────────────────────────────────────
 @app.get("/knowledge/stats", tags=["Knowledge"])
 async def knowledge_stats():
     if _knowledge_base is None:

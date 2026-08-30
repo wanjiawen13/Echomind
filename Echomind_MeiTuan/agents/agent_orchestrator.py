@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class AgentType(Enum):
+    # 这里按美团外卖客服的业务域拆分 Agent，便于后续扩展更多专属能力。
     DELIVERY_SERVICE = "delivery_service"
     REFUND_SUPPORT = "refund_support"
     PLATFORM_SUPPORT = "platform_support"
@@ -56,6 +57,7 @@ class AgentResponse:
 
 @dataclass
 class Request:
+    # 编排层内部统一使用的请求结构，承载意图、实体和查询结果。
     message: str
     user_id: str
     conv_id: str
@@ -90,6 +92,7 @@ class OrchestratorResult:
 
 @dataclass
 class RoutingDecision:
+    # 一次请求最终落到哪个主 Agent、是否需要辅助 Agent。
     primary_agent: AgentType
     supporting_agents: List[AgentType] = field(default_factory=list)
     reason: str = ""
@@ -287,6 +290,7 @@ class EscalationAgent(BaseAgent):
 
 
 class AgentOrchestrator:
+    # 这张表决定了不同意图会优先进入哪个业务域的 Agent。
     _INTENT_ROUTING: Dict[IntentCategory, AgentType] = {
         IntentCategory.ORDER_STATUS: AgentType.DELIVERY_SERVICE,
         IntentCategory.DELIVERY_PROGRESS: AgentType.DELIVERY_SERVICE,
@@ -348,6 +352,7 @@ class AgentOrchestrator:
 
         self._hydrate_entity_hints(req)
 
+        # 先处理需要追问的场景，避免一上来就进入错误的 Agent 分流。
         if self._needs_clarification(req):
             return OrchestratorResult(
                 request_id=req.request_id,
@@ -361,6 +366,7 @@ class AgentOrchestrator:
                 routing_confidence=req.intent_confidence,
             )
 
+        # 订单类问题会优先走查单工具，确保 Agent 拿到结构化结果后再回复。
         if self._needs_order_tracking(req):
             req.tracking_info = await self._maybe_track_order(req)
         else:
@@ -435,6 +441,7 @@ class AgentOrchestrator:
         )
 
     def _route_decision(self, req: Request) -> RoutingDecision:
+        # 先看是否要直接升级，再根据意图和关键词做域路由。
         if req.urgency == UrgencyLevel.CRITICAL:
             return RoutingDecision(primary_agent=AgentType.ESCALATION, reason="紧急度为 CRITICAL", confidence=1.0)
         if req.intent in (IntentCategory.HUMAN_HANDOFF, IntentCategory.COMPLAINT):
@@ -470,6 +477,7 @@ class AgentOrchestrator:
 
     def _domain_scores(self, req: Request) -> Dict[AgentType, float]:
         msg = req.message.lower()
+        # 分数由意图命中和关键词命中共同构成，保证规则和语义都能参与决策。
         scores = {
             AgentType.DELIVERY_SERVICE: 0.1,
             AgentType.REFUND_SUPPORT: 0.1,
@@ -606,6 +614,7 @@ class AgentOrchestrator:
     async def _maybe_track_order(self, req: Request) -> Dict[str, Any]:
         if self._tool_manager is None:
             return {}
+        # 查单参数优先取显式输入，其次取意图识别提取出的实体。
         order_id = req.order_id or (req.entities.get("order_id", [None])[0] if req.entities.get("order_id") else None)
         phone_last4 = req.phone_last4 or (req.entities.get("phone_last4", [None])[0] if req.entities.get("phone_last4") else None)
         params = {"user_id": req.user_id}

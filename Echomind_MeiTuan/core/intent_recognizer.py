@@ -71,6 +71,7 @@ _TEMPLATES: Dict[IntentCategory, List[str]] = {
     IntentCategory.HUMAN_HANDOFF: ["转人工", "找客服", "人工处理"],
 }
 
+# 意图组用于后续路由和前端展示，帮助把细粒度意图收敛到大类。
 _INTENT_GROUPS: Dict[IntentCategory, str] = {
     IntentCategory.ORDER_STATUS: "delivery",
     IntentCategory.DELIVERY_PROGRESS: "delivery",
@@ -118,6 +119,7 @@ class IntentRecognizer:
             self.client = client if client.available else None
 
     async def recognize(self, message: str, history: Optional[List[Dict[str, str]]] = None) -> IntentResult:
+        # 先走缓存，避免高频重复问题反复触发三路识别。
         key = self._cache_key(message, history)
         if key in self._cache:
             self.cache_hits += 1
@@ -136,6 +138,7 @@ class IntentRecognizer:
 
         intent, confidence, source_scores = self._vote(llm, emb, rule)
         clean_message = self._clean_text(message)
+        # 如果用户明确带了订单号，而且语义像“查单/看进度”，直接收敛到订单状态。
         order_query_terms = ("查", "看", "状态", "进度", "到哪", "还没到", "配送", "送达", "没收到", "未收到", "没有收到", "没拿到")
         if entities.get("order_id") and any(kw in clean_message for kw in order_query_terms):
             if not any(kw in clean_message for kw in ("退款", "退钱", "取消", "少送", "错送", "漏送")):
@@ -261,6 +264,7 @@ class IntentRecognizer:
             return {"intent": IntentCategory.OTHER, "confidence": 0.0}
 
     def _vote(self, llm: Dict[str, Any], emb: Dict[str, Any], rule: Dict[str, Any]) -> Tuple[IntentCategory, float, Dict[str, float]]:
+        # 三路结果投票：LLM 负责语义，embedding 负责相似度，规则负责兜底。
         source_scores = {
             "llm": float(llm.get("confidence", 0.0) or 0.0),
             "embedding": float(emb.get("confidence", 0.0) or 0.0),
@@ -289,6 +293,7 @@ class IntentRecognizer:
 
     def _extract_entities(self, message: str) -> Dict[str, List[str]]:
         msg = self._clean_text(message)
+        # 这里先抽订单号、手机号后四位和金额，足够支撑当前客服闭环。
         return {
             "order_id": self._unique(re.findall(r"(?:订单号?|订单编号|单号|order(?:_id)?)\s*(?:是|为|:|：|#)?\s*([A-Za-z0-9_-]{4,32})", msg, re.I)),
             "phone_last4": self._unique(re.findall(r"(?:尾号|后四位|手机号后四位)\s*([0-9]{4})", msg)),
@@ -296,6 +301,7 @@ class IntentRecognizer:
         }
 
     async def _load_template_embeddings(self) -> None:
+        # 按需加载模板向量，避免启动时一次性把所有模板都算完。
         missing = [cat for cat in _TEMPLATES if cat not in self._tpl_embeddings]
         if not missing:
             return
@@ -316,6 +322,7 @@ class IntentRecognizer:
                     return list(resp.data[0].embedding)
                 except Exception as ex:
                     logger.warning("remote embedding failed, fallback local: %s", ex)
+        # 远程 embedding 不可用时退回本地 hash 向量，保证识别链路不断。
         return self._local_embedding(text)
 
     @staticmethod

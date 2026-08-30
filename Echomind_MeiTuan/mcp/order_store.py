@@ -16,6 +16,7 @@ ACTIVE_STATUSES = {"merchant_preparing", "rider_assigned", "in_delivery", "waiti
 
 @dataclass
 class OrderRecord:
+    # 这里保留的是客服回复真正会用到的字段，而不是完整订单表结构。
     order_id: str
     user_id: str
     phone_last4: str
@@ -39,6 +40,7 @@ class MockOrderStore:
         self.load()
 
     def load(self) -> None:
+        # 先从本地 JSON 装载订单，后续可以很容易替换成真实 API 适配器。
         if not self.source_path.exists():
             self._orders = []
             return
@@ -53,6 +55,7 @@ class MockOrderStore:
         )
 
     def search(self, params: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # 查询逻辑支持订单号精确命中，也支持 user_id + 手机后四位的半精确检索。
         order_id = str(params.get("order_id") or "").strip()
         user_id = str(params.get("user_id") or "").strip()
         phone_last4 = str(params.get("phone_last4") or "").strip()
@@ -77,6 +80,7 @@ class MockOrderStore:
             }
 
         if len(matches) > 1 and not order_id:
+            # 如果同一用户下存在多个可能订单，先把候选项返回给上层追问。
             candidates = [self._to_public(order) for order in matches[:3]]
             return {
                 "found": True,
@@ -116,6 +120,7 @@ class MockOrderStore:
         return list(self._orders)
 
     def _to_public(self, order: OrderRecord) -> Dict[str, Any]:
+        # 对外只暴露客服需要展示的状态字段，避免泄露内部原始结构。
         data = asdict(order)
         data["status_label"] = self._status_label(order.status)
         data["is_active"] = order.status in ACTIVE_STATUSES

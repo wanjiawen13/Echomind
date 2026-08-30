@@ -53,7 +53,7 @@ class _MessagesAdapter:
 
 
 class DeepSeekClient:
-    """Thin DeepSeek wrapper built on the OpenAI-compatible API."""
+    """基于 OpenAI 兼容协议的 DeepSeek 轻量封装。"""
 
     def __init__(self, api_key: str, base_url: str = "https://api.deepseek.com"):
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url) if AsyncOpenAI is not None else None

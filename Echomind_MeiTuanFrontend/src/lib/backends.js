@@ -8,6 +8,7 @@ const DEFAULT_API = {
 const STORAGE_KEY = 'echomind.meituan.frontend.settings'
 
 export function createInitialSettings() {
+  // 启动时先恢复用户上次调试时的配置。
   const saved = readSettings()
   return {
     apiUrl: saved.apiUrl || DEFAULT_API.baseUrl,
@@ -19,6 +20,7 @@ export function createInitialSettings() {
 }
 
 export function saveSettings(settings) {
+  // 只保存调试态需要的少量字段，避免把整个页面状态都塞进本地存储。
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     apiUrl: settings.apiUrl,
     userId: settings.userId,
@@ -29,6 +31,7 @@ export function saveSettings(settings) {
 }
 
 export function backendMeta(settings) {
+  // 统一把用户输入的地址标准化，避免多余的尾部斜杠影响请求拼接。
   return {
     ...DEFAULT_API,
     baseUrl: normalizeBaseUrl(settings.apiUrl || DEFAULT_API.baseUrl)
@@ -65,6 +68,7 @@ export async function requestSearch(settings, query, topK = 5) {
 }
 
 export async function requestChat(settings, message) {
+  // 聊天接口返回的是后端原始结构，这里再做一层前端友好的归一化。
   const raw = await requestJson(settings, '/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -110,6 +114,7 @@ export function samplePrompts() {
 }
 
 function buildChatPayload(settings, message) {
+  // 把界面上的输入收敛成后端需要的最小字段集。
   return compactObject({
     message,
     user_id: settings.userId || 'anonymous',
@@ -120,6 +125,7 @@ function buildChatPayload(settings, message) {
 }
 
 function normalizeChatResponse(raw) {
+  // 兼容后端 snake_case 字段，前端统一读 camelCase。
   return {
     conversationId: raw.conv_id || '',
     response: raw.response || '',
@@ -143,6 +149,7 @@ function normalizeChatResponse(raw) {
 }
 
 async function requestJson(settings, path, options = {}) {
+  // 统一封装 fetch，所有接口都走同一套错误处理。
   const baseUrl = backendMeta(settings).baseUrl
   const url = `${baseUrl}${path}`
   const response = await fetch(url, options)
@@ -165,6 +172,7 @@ function normalizeBaseUrl(value) {
 }
 
 function compactObject(value) {
+  // 去掉空值字段，避免给后端传一堆无意义参数。
   return Object.fromEntries(
     Object.entries(value).filter(([, item]) => item !== undefined && item !== '')
   )

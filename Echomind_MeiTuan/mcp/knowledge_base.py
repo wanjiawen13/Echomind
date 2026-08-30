@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class KnowledgeChunk:
+    # 一个 chunk 对应一段可检索的知识内容。
     title: str
     content: str
     chunk: int = 0
@@ -26,6 +27,7 @@ class KnowledgeBase:
         self._docs: List[KnowledgeChunk] = []
 
     def add_documents(self, documents: List[Dict[str, str]]) -> int:
+        # 导入时先切块，再写入内存索引，后面检索就是对 chunk 进行打分。
         count = 0
         for doc in documents:
             title = str(doc.get("title", "")).strip() or "未命名文档"
@@ -41,6 +43,7 @@ class KnowledgeBase:
         return await async_to_thread(self.add_documents, documents)
 
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        # 当前检索是轻量版关键词打分，足以覆盖 MVP 阶段的 RAG 闭环。
         query_terms = self._tokenize(query)
         scored: List[Tuple[float, KnowledgeChunk]] = []
         for doc in self._docs:
@@ -71,6 +74,7 @@ class KnowledgeBase:
         return await async_to_thread(self.doc_count)
 
     def load_seed_documents_from_dir(self, seed_dir: str) -> int:
+        # 这里支持 md/txt/json 三类种子文件，方便直接把业务知识丢进目录。
         directory = Path(seed_dir)
         if not directory.exists():
             return 0
@@ -95,6 +99,7 @@ class KnowledgeBase:
         return self.load_seed_documents_from_dir(str(self.data_dir))
 
     def _score_doc(self, query_terms: List[str], doc: KnowledgeChunk) -> float:
+        # 标题权重略高，正文内容次之，优先把最像问题的条目排前面。
         text = f"{doc.title} {doc.content}".lower()
         if not query_terms:
             return 0.0
@@ -105,6 +110,7 @@ class KnowledgeBase:
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:
+        # 对中文做最简分词：保留长中文片段、英文单词和数字串。
         lowered = str(text).lower()
         raw_terms = re.findall(r"[\u4e00-\u9fff]{2,}|[a-z0-9]+", lowered)
         if not raw_terms:
@@ -118,6 +124,7 @@ class KnowledgeBase:
 
     @staticmethod
     def _chunk_text(text: str, chunk_size: int = 500) -> List[str]:
+        # 先按句子切，再按长度合并，避免知识块过长影响检索效果。
         if len(text) <= chunk_size:
             return [text] if text.strip() else []
         chunks: List[str] = []

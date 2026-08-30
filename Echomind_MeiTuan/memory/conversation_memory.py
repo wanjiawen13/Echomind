@@ -31,6 +31,7 @@ class MsgRole(Enum):
 
 @dataclass
 class Message:
+    # 单条消息保留角色、内容和时间戳，方便后续压缩和回放。
     role: MsgRole
     content: str
     timestamp: datetime = field(default_factory=datetime.now)
@@ -39,6 +40,7 @@ class Message:
 
 @dataclass
 class MemoryContext:
+    # 这里把会话上下文拆成四层，方便给 prompt 组装不同粒度的信息。
     recent_messages: List[Message]
     relevant_history: List[str]
     user_profile: Dict[str, Any]
@@ -49,6 +51,7 @@ class MemoryContext:
         return text.encode("utf-8", errors="ignore").decode("utf-8")
 
     def to_prompt_text(self) -> str:
+        # 生成给 LLM 看的上下文文本，顺序从摘要到最近消息。
         parts: List[str] = []
         if self.summary:
             parts.append(f"[会话摘要]\n{self._clean(self.summary)}")
@@ -95,6 +98,7 @@ class MemoryManager:
         content: str,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
+        # 工作记忆先写内存，再尽量镜像到 Redis，保证短会话和服务重启都能保留部分上下文。
         user_id = self._safe_text(user_id)
         conv_id = self._safe_text(conv_id)
         key = self._wm_key(user_id, conv_id)
@@ -111,6 +115,7 @@ class MemoryManager:
             await self._compress(user_id, conv_id)
 
     async def update_profile(self, user_id: str, conv_id: str) -> None:
+        # 用户画像只保留轻量偏好和高频问题，避免把记忆层做得过重。
         user_id = self._safe_text(user_id)
         conv_id = self._safe_text(conv_id)
         messages = await self._get_working_memory(user_id, conv_id)
@@ -126,6 +131,7 @@ class MemoryManager:
         await self._store_profile(user_id, conv_id, profile)
 
     async def get_context(self, user_id: str, conv_id: str, query: str = "") -> MemoryContext:
+        # 对外统一输出上下文对象，调用方只关心 prompt 文本，不关心底层存储细节。
         user_id = self._safe_text(user_id)
         conv_id = self._safe_text(conv_id)
         query = self._safe_text(query)
@@ -136,6 +142,7 @@ class MemoryManager:
         return MemoryContext(recent_messages=recent, relevant_history=history, user_profile=profile, summary=summary)
 
     async def _compress(self, user_id: str, conv_id: str) -> None:
+        # 当工作记忆积累到一定长度后，先总结旧消息，再保留最近几轮原文。
         key = self._wm_key(user_id, conv_id)
         messages = await self._get_working_memory(user_id, conv_id)
         if len(messages) < self.COMPRESS_AT:
@@ -161,6 +168,7 @@ class MemoryManager:
         await self._mirror_working_memory_to_redis(key, self._working[key])
 
     async def _get_working_memory(self, user_id: str, conv_id: str) -> List[Message]:
+        # 优先读内存，内存没有时再回捞 Redis。
         key = self._wm_key(user_id, conv_id)
         raw_items = self._working.get(key, [])
         if not raw_items and self._redis is not None:
@@ -173,6 +181,7 @@ class MemoryManager:
         return [self._dict_to_message(item) for item in raw_items]
 
     async def _search_episodic(self, user_id: str, query: str) -> List[str]:
+        # 情景记忆用于找“以前类似问题”的摘要，不是逐字回放。
         if not query.strip():
             return []
         chroma_hits = await self._search_chroma_episodic(user_id, query)
@@ -191,6 +200,7 @@ class MemoryManager:
         return [text for _, text in scored[: self.HISTORY_TOP_K]]
 
     async def _get_profile(self, user_id: str) -> Dict[str, Any]:
+        # 用户画像先查本地缓存，再查持久化层。
         if user_id in self._profiles:
             return self._profiles[user_id]
         profile = await self._get_chroma_profile(user_id)
@@ -232,12 +242,14 @@ class MemoryManager:
             self._redis = None
 
     def _summarize_messages(self, messages: List[Message]) -> str:
+        # 摘要足够短即可，重点是把历史意图和处理结果压缩出来。
         if not messages:
             return ""
         texts = [f"{m.role.value}: {m.content}" for m in messages]
         return "；".join(texts[:3])[:600]
 
     def _extract_preferences(self, text: str) -> List[str]:
+        # 从会话里抽取一些可复用的偏好信号。
         prefs = []
         lowered = text.lower()
         if "简短" in lowered or "简洁" in lowered:
@@ -249,6 +261,7 @@ class MemoryManager:
         return list(dict.fromkeys(prefs))
 
     def _extract_common_issue(self, text: str) -> str:
+        # 提取用户最常问的问题类型，后续可用于个性化路由。
         lowered = text.lower()
         for keyword in ["配送", "退款", "取消", "地址", "骑手", "少送", "错送", "验证码", "登录"]:
             if keyword in lowered:

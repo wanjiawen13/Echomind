@@ -48,6 +48,7 @@ class ToolStats:
 
 
 class CircuitBreaker:
+    # 简化版熔断器：失败太多就暂时拒绝调用，避免把下游继续打挂。
     def __init__(self, failure_threshold: int = 5, recovery_s: float = 60.0):
         self.threshold = failure_threshold
         self.recovery_s = recovery_s
@@ -78,6 +79,7 @@ class CircuitBreaker:
 
 @dataclass
 class Tool:
+    # 一个工具既包含执行器，也包含 schema、缓存和降级逻辑。
     name: str
     description: str
     handler: Callable
@@ -114,6 +116,7 @@ class MCPToolManager:
         if not tool:
             return ToolResult(success=False, data=None, tool_name=name, error=f"工具不存在: {name}")
 
+        # 先查缓存，再看熔断状态，最后才进入真实执行。
         cache_rerank_top_k = rerank_top_k if rerank_top_k > 0 and tool.supports_rerank else 0
         if use_cache and tool.cache_ttl > 0:
             cached = self._get_cache(name, params, cache_rerank_top_k)
@@ -165,6 +168,7 @@ class MCPToolManager:
         top_k: int = 5,
         context: Optional[Dict[str, Any]] = None,
     ) -> ToolResult:
+        # 先做多种 query 改写，再去重合并结果，提升召回率。
         queries = self.rewrite_query(query, n=3)
         recall_k = max(top_k, 5)
         tasks = [self.call(tool_name, {"query": q, "top_k": recall_k}, context, use_cache=True) for q in queries]
@@ -183,6 +187,7 @@ class MCPToolManager:
         return ToolResult(success=True, data=reranked, tool_name=tool_name, reranked=True)
 
     def rewrite_query(self, query: str, n: int = 3) -> List[str]:
+        # 当前实现是轻量版 query expansion，足够支撑 MVP 阶段的检索体验。
         base = str(query).strip()
         if not base:
             return [base]
@@ -211,6 +216,7 @@ class MCPToolManager:
         context: Optional[Dict[str, Any]],
         error: str,
     ) -> ToolResult:
+        # 工具失败时尽量返回可解释的降级结果，而不是直接抛出给上层。
         if tool.fallback is None:
             return ToolResult(success=False, data=None, tool_name=tool.name, error=error)
         try:
@@ -232,6 +238,7 @@ class MCPToolManager:
     _TYPE_MAP = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
     def _validate_params(self, tool: Tool, params: Dict[str, Any]) -> None:
+        # 先用 schema 做最小校验，避免把脏参数直接交给下游。
         schema = tool.schema
         required = schema.get("required", [])
         properties = schema.get("properties", {})

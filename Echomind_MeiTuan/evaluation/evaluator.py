@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class IntentTestCase:
+    # 单条意图样例，只关心输入、目标标签和必要上下文。
     message: str
     expected_intent: str
     context: Optional[Dict[str, Any]] = None
@@ -21,6 +22,7 @@ class IntentTestCase:
 
 @dataclass
 class QualityScores:
+    # 这里把对话质量拆成四个维度，方便定位到底是相关性还是完整性出了问题。
     relevance: float
     accuracy: float
     completeness: float
@@ -73,6 +75,7 @@ Agent 响应: {response}
         self._model = model
 
     async def judge(self, question: str, response: str, context: Optional[str] = None) -> QualityScores:
+        # 评审优先用模型打分，不可用时再退回启发式评分。
         if self._client is None:
             return self._heuristic(question, response, context)
         prompt = self.JUDGE_PROMPT.format(
@@ -123,6 +126,7 @@ class IntentEvaluator:
         self._recognizer = recognizer
 
     async def evaluate(self, cases: List[IntentTestCase]) -> Dict[str, Any]:
+        # 先跑意图样例，再计算准确率、宏平均 F1 和每类指标。
         predictions, ground_truth = [], []
         case_details: List[Dict[str, Any]] = []
         for case in cases:
@@ -189,6 +193,7 @@ class EndToEndEvaluator:
         intent_cases: Optional[List[IntentTestCase]] = None,
         dialog_cases: Optional[List[Dict[str, Any]]] = None,
     ) -> EvalReport:
+        # 端到端评测包含两段：意图识别和整轮对话质量。
         results: List[EvalResult] = []
         all_scores: Dict[str, List[float]] = {"relevance": [], "accuracy": [], "completeness": [], "helpfulness": []}
 
@@ -239,6 +244,7 @@ class EndToEndEvaluator:
     async def _evaluate_dialog_case(self, case: Dict[str, Any], case_idx: int) -> List[EvalResult]:
         from agents.agent_orchestrator import Request as OrcReq
 
+        # 每个 case 按轮次喂给编排器，最后再由评审器打分。
         questions = self._dialog_turns(case)
         if not questions:
             return []
@@ -284,6 +290,7 @@ class EndToEndEvaluator:
 
     @staticmethod
     def _dialog_turns(case: Dict[str, Any]) -> List[str]:
+        # 兼容单轮和多轮评测输入。
         turns = case.get("turns")
         if isinstance(turns, list):
             return [str(t) for t in turns if str(t).strip()]
@@ -292,11 +299,13 @@ class EndToEndEvaluator:
 
     @staticmethod
     def _history_context(history: List[Dict[str, str]]) -> str:
+        # 把多轮上下文压成一个可读字符串给 LLM judge。
         if not history:
             return ""
         return "[评测多轮历史]\n" + "\n".join(f"{item['role']}: {item['content']}" for item in history[-8:])
 
     def _detect_regressions(self, current: Dict[str, float]) -> List[str]:
+        # 和基线比一下，看看有没有明显退化。
         prev_report = self._history[-1] if self._history else self._baseline
         if prev_report is None:
             return []
@@ -310,6 +319,7 @@ class EndToEndEvaluator:
         return regressions
 
     def _recommendations(self, scores: Dict[str, float]) -> List[str]:
+        # 根据弱项给出下一步优化建议。
         recs = []
         if scores.get("intent_accuracy", 1.0) < 0.9:
             recs.append("意图识别准确率 < 90%：补充外卖场景示例和规则样本")

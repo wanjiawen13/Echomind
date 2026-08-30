@@ -1,5 +1,6 @@
 <template>
   <main class="app-shell">
+    <!-- 左侧是连接配置和示例入口，右侧是对话与调试主区。 -->
     <aside class="sidebar">
       <section class="brand">
         <div class="brand-mark">MT</div>
@@ -91,6 +92,7 @@
         </div>
       </header>
 
+      <!-- 中间主视图：聊天结果和路由信息同步展示。 -->
       <section class="main-grid">
         <section class="chat-panel">
           <div class="messages" ref="messageList">
@@ -113,6 +115,7 @@
           </form>
         </section>
 
+        <!-- 右侧检查区：意图路由、订单查询、知识库、Skills 和评测结果。 -->
         <aside class="inspector">
           <section class="panel inspector-panel">
             <div class="panel-heading">
@@ -189,6 +192,7 @@
         </aside>
       </section>
 
+      <!-- 工具区放在底部，方便单独验证知识库、Skills 和评测能力。 -->
       <section class="tools-grid">
         <article class="tool-panel">
           <div class="panel-heading">
@@ -327,10 +331,12 @@ watch(
 )
 
 onMounted(() => {
+  // 页面初始化时先拉一轮后端状态，避免空白面板。
   refreshDashboard()
 })
 
 function persist() {
+  // 只要用户改了配置，就同步进 localStorage。
   saveSettings(settings)
 }
 
@@ -491,6 +497,7 @@ function applySkills(data) {
 }
 
 function responseMeta(response) {
+  // 这里把核心路由信息压成一行，便于聊天记录快速扫读。
   return [
     response.intent,
     response.intentGroup,
@@ -501,6 +508,7 @@ function responseMeta(response) {
 }
 
 function percent(value) {
+  // 统一按百分比展示，避免不同面板里格式不一致。
   const num = Number(value || 0)
   return `${Math.round(num * 100)}%`
 }
@@ -511,6 +519,7 @@ function etaText(value) {
 }
 
 function merchantLabel(value) {
+  // 把后端状态码转成更贴近客服场景的中文描述。
   const labels = {
     preparing: '备餐中',
     ready: '已出餐',
@@ -526,11 +535,13 @@ function formatList(value) {
 }
 
 async function scrollToBottom() {
+  // 发送后滚到底部，保持对话流的连续感。
   await nextTick()
   messageList.value?.scrollTo({ top: messageList.value.scrollHeight, behavior: 'smooth' })
 }
 
 function makeId() {
+  // 本地消息列表的临时 id，优先用浏览器原生 UUID。
   if (crypto?.randomUUID) return crypto.randomUUID()
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }

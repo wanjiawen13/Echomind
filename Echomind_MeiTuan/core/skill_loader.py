@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Skill:
+    # 每个 Skill 都是一个可匹配的业务规则块。
     name: str
     description: str
     content: str
@@ -19,6 +20,7 @@ class Skill:
     enabled: bool = True
 
     def matches(self, message: str, agent_type: Optional[str] = None) -> bool:
+        # 先看是否启用，再看是否只对某些 Agent 生效，最后才做关键词匹配。
         if not self.enabled:
             return False
         if self.agents and agent_type and agent_type.lower() not in self.agents:
@@ -29,6 +31,7 @@ class Skill:
         return any(keyword.lower() in lowered for keyword in self.keywords)
 
     def to_prompt_block(self, max_chars: int = 3200) -> str:
+        # 转成可直接塞进 system prompt 的文本块。
         body = self.content.strip()
         if len(body) > max_chars:
             body = body[:max_chars].rstrip() + "\n..."
@@ -65,6 +68,7 @@ class SkillManager:
         return list(self._errors)
 
     def load(self) -> List[Skill]:
+        # 启动或热加载时统一扫一遍目录，刷新当前可用 Skills。
         loaded: List[Skill] = []
         errors: List[str] = []
 
@@ -90,6 +94,7 @@ class SkillManager:
         return self.load()
 
     def prompt_for(self, message: str, agent_type: Optional[str] = None) -> str:
+        # 按当前请求动态挑选可用 Skills，并按字符预算拼接。
         blocks: List[str] = []
         remaining = self.max_prompt_chars
         for skill in self._skills:
@@ -116,6 +121,7 @@ class SkillManager:
         }
 
     def _discover_files(self, root_dir: Path) -> Iterable[Path]:
+        # 优先识别 SKILL.md，其次兼容普通 md/txt/json 文档。
         skill_md_files = sorted(root_dir.rglob("SKILL.md"))
         yielded = {path.resolve() for path in skill_md_files}
         for path in skill_md_files:
@@ -135,6 +141,7 @@ class SkillManager:
         return self._load_text(path)
 
     def _load_json(self, path: Path) -> Optional[Skill]:
+        # JSON 格式适合做结构化 Skill 元数据。
         raw = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
             raise ValueError("JSON Skill must be an object")
@@ -152,6 +159,7 @@ class SkillManager:
         )
 
     def _load_text(self, path: Path) -> Optional[Skill]:
+        # 文本格式从 front matter 和首个标题里提取元信息。
         raw = path.read_text(encoding="utf-8")
         meta, body = self._split_front_matter(raw)
         body = body.strip()
