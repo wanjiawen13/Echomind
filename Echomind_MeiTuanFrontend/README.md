@@ -22,7 +22,7 @@ http://127.0.0.1:8011
 后端启动示例：
 
 ```powershell
-cd "D:\Code\Encomind\EchoMind所有代码+简历\Echomind_MeiTuan"
+cd Echomind_MeiTuan
 $env:DEEPSEEK_API_KEY="你的真实key"
 $env:DEEPSEEK_BASE_URL="https://api.deepseek.com"
 $env:DEEPSEEK_MODEL="deepseek-chat"
@@ -32,7 +32,7 @@ python -m uvicorn api.main:app --host 127.0.0.1 --port 8011
 ## 本地运行
 
 ```powershell
-cd "D:\Code\Encomind\EchoMind所有代码+简历\Echomind_MeiTuanFrontend"
+cd Echomind_MeiTuanFrontend
 npm install
 npm run dev
 ```
@@ -119,3 +119,4 @@ Docker 模式下，Nginx 会把 `/api/meituan/` 代理到宿主机的 `8011` 端
 优惠券为什么不能用
 验证码一直收不到，怎么办？
 ```
+
