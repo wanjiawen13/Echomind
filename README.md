@@ -5,7 +5,7 @@
 本项目基于 EchoMind 的框架思路重构，聚焦外卖客服常见问题的完整闭环：
 订单状态、配送进度、骑手联系、商家出餐、退款、取消、少送错送、优惠券、验证码、账号与平台排障。
 
-![Python](https://img.shields.io/badge/Python-3.6%2B-blue)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.83%2B-green)
 ![Vue](https://img.shields.io/badge/Vue-3-brightgreen)
 ![DeepSeek](https://img.shields.io/badge/DeepSeek-Compatible-orange)
