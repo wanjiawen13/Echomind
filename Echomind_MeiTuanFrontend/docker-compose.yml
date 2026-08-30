@@ -1,0 +1,11 @@
+services:
+  echomind-meituan-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echomind-meituan-frontend
+    ports:
+      - "5174:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

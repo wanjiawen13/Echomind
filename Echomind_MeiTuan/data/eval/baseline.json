@@ -1,0 +1,352 @@
+{
+  "timestamp": "2026-08-30T10:37:04.294539",
+  "total": 11,
+  "passed": 11,
+  "pass_rate": 1.0,
+  "avg_scores": {
+    "relevance": 1.0,
+    "accuracy": 0.89,
+    "completeness": 0.9,
+    "helpfulness": 0.9,
+    "intent_accuracy": 1.0
+  },
+  "regressions": [],
+  "recommendations": [
+    "所有指标均达标，继续保持"
+  ],
+  "results": [
+    {
+      "test_id": "intent_recognition",
+      "passed": true,
+      "scores": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0
+      },
+      "detail": "准确率 100.0%，Macro-F1 1.000",
+      "metadata": {
+        "total": 14,
+        "correct": 14,
+        "cases": [
+          {
+            "message": "我的外卖还要多久到？",
+            "expected": "delivery_progress",
+            "predicted": "delivery_progress",
+            "confidence": 0.9,
+            "reasoning": "local"
+          },
+          {
+            "message": "帮我看看订单状态",
+            "expected": "order_status",
+            "predicted": "order_status",
+            "confidence": 0.9,
+            "reasoning": "local"
+          },
+          {
+            "message": "订单号是 MT20260829001，帮我看一下",
+            "expected": "order_status",
+            "predicted": "order_status",
+            "confidence": 0.7,
+            "reasoning": "local"
+          },
+          {
+            "message": "我要退款",
+            "expected": "refund",
+            "predicted": "refund",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "帮我取消订单",
+            "expected": "cancel_order",
+            "predicted": "cancel_order",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "商家出餐太慢了",
+            "expected": "merchant_delay",
+            "predicted": "merchant_delay",
+            "confidence": 0.7,
+            "reasoning": "local"
+          },
+          {
+            "message": "骑手电话多少",
+            "expected": "rider_contact",
+            "predicted": "rider_contact",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "我这单少送了一份米饭",
+            "expected": "missing_item",
+            "predicted": "missing_item",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "餐品送错了",
+            "expected": "wrong_item",
+            "predicted": "wrong_item",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "我想修改收货地址",
+            "expected": "address_change",
+            "predicted": "address_change",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "优惠券为什么不能用",
+            "expected": "coupon_rule",
+            "predicted": "coupon_rule",
+            "confidence": 0.7,
+            "reasoning": "local"
+          },
+          {
+            "message": "验证码一直收不到",
+            "expected": "login_issue",
+            "predicted": "login_issue",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "App 页面打不开",
+            "expected": "platform_error",
+            "predicted": "platform_error",
+            "confidence": 0.5,
+            "reasoning": "local"
+          },
+          {
+            "message": "转人工客服",
+            "expected": "human_handoff",
+            "predicted": "human_handoff",
+            "confidence": 0.7,
+            "reasoning": "local"
+          }
+        ]
+      }
+    },
+    {
+      "test_id": "dialog_0",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 我的外卖还没到... → 综合评分 0.925",
+      "metadata": {
+        "question": "我的外卖还没到",
+        "response": "找到多个可能相关的订单，请补充具体订单号或手机号后四位，我帮您精确查询。",
+        "agent_type": "delivery_service",
+        "intent": "delivery_progress",
+        "turn": 0,
+        "conv_id": "eval_0",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_1",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 订单号是 MT20260829001，帮我看一下... → 综合评分 0.925",
+      "metadata": {
+        "question": "订单号是 MT20260829001，帮我看一下",
+        "response": "已帮您查询到订单 MT20260829001，当前状态是：骑手已接单。预计还需要 18 分钟左右。商家还在备餐中，我会优先按当前进度帮您关注。骑手是 张师傅，我也帮您记录了当前进度。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 0,
+        "conv_id": "eval_1",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_2",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 商家一直没出餐，我要不要退款？... → 综合评分 0.925",
+      "metadata": {
+        "question": "商家一直没出餐，我要不要退款？",
+        "response": "找到多个可能相关的订单，请补充具体订单号或手机号后四位，我帮您精确查询。",
+        "agent_type": "delivery_service",
+        "intent": "merchant_delay",
+        "turn": 0,
+        "conv_id": "eval_2",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_3",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 订单号是 MT20260829004，为什么还没骑手接单... → 综合评分 0.925",
+      "metadata": {
+        "question": "订单号是 MT20260829004，为什么还没骑手接单",
+        "response": "已帮您查询到订单 MT20260829004，当前状态是：等待派单。预计还需要 28 分钟左右。商家侧已完成出餐。当前异常说明：附近骑手紧张，正在等待派单。如果等待时间继续变长，建议转人工确认派单状态。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 0,
+        "conv_id": "eval_3",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_4",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 订单显示送达了，但我没收到... → 综合评分 0.925",
+      "metadata": {
+        "question": "订单显示送达了，但我没收到",
+        "response": "已帮您查询到订单 MT20260829005，当前状态是：已送达。预计还需要 0 分钟左右。骑手是 王师傅，我也帮您记录了当前进度。订单显示已送达但您未收到，我建议先查看门口、前台或取餐柜记录；我也会建议转人工核验骑手送达轨迹和凭证。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 0,
+        "conv_id": "eval_4",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_5",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 订单号 MT20260829006 地址定位错了怎么办... → 综合评分 0.925",
+      "metadata": {
+        "question": "订单号 MT20260829006 地址定位错了怎么办",
+        "response": "已帮您查询到订单 MT20260829006，当前状态是：配送异常。预计还需要 0 分钟左右。商家侧已完成出餐。骑手是 赵师傅，我也帮您记录了当前进度。当前异常说明：骑手反馈收货地址定位异常，需要人工确认。这个订单已出现配送异常，建议转人工继续确认地址或配送记录。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 0,
+        "conv_id": "eval_5",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_6_turn_0",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 你好，我想查一下外卖进度... → 综合评分 0.925",
+      "metadata": {
+        "question": "你好，我想查一下外卖进度",
+        "response": "找到多个可能相关的订单，请补充具体订单号或手机号后四位，我帮您精确查询。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 0,
+        "conv_id": "eval_6",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_6_turn_1",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 订单号是 MT20260829002... → 综合评分 0.925",
+      "metadata": {
+        "question": "订单号是 MT20260829002",
+        "response": "已帮您查询到订单 MT20260829002，当前状态是：商家备餐中。预计还需要 35 分钟左右。商家还在备餐中，我会优先按当前进度帮您关注。当前异常说明：商家出餐较慢，正在催单中。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 1,
+        "conv_id": "eval_6",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_6_turn_2",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.9,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.925
+      },
+      "detail": "Q: 现在骑手到哪了？... → 综合评分 0.925",
+      "metadata": {
+        "question": "现在骑手到哪了？",
+        "response": "已帮您查询到订单 MT20260829002，当前状态是：商家备餐中。预计还需要 35 分钟左右。商家还在备餐中，我会优先按当前进度帮您关注。当前异常说明：商家出餐较慢，正在催单中。",
+        "agent_type": "delivery_service",
+        "intent": "order_status",
+        "turn": 2,
+        "conv_id": "eval_6",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    },
+    {
+      "test_id": "dialog_7",
+      "passed": true,
+      "scores": {
+        "relevance": 1.0,
+        "accuracy": 0.8,
+        "completeness": 0.9,
+        "helpfulness": 0.9,
+        "overall": 0.9
+      },
+      "detail": "Q: 验证码一直收不到，怎么办？... → 综合评分 0.900",
+      "metadata": {
+        "question": "验证码一直收不到，怎么办？",
+        "response": "验证码问题我先帮您排查：请确认手机号是否正确、短信是否被拦截、网络是否稳定，并避免短时间频繁获取验证码。仍收不到的话，请提供发生时间和页面提示，我帮您转人工继续处理。",
+        "agent_type": "platform_support",
+        "intent": "login_issue",
+        "turn": 0,
+        "conv_id": "eval_7",
+        "judge_failed": true,
+        "judge_error": null
+      }
+    }
+  ]
+}
